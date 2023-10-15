@@ -1,0 +1,12 @@
+
+# ssd-hostpath-sc.yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: nvme-raid
+provisioner: microk8s.io/hostpath
+reclaimPolicy: Delete
+parameters:
+  pvDir: /mnt/nvme00
+volumeBindingMode: WaitForFirstConsumer
+
