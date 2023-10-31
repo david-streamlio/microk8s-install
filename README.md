@@ -9,7 +9,7 @@ sudo sysctl -p
 
 ## 1. Enable cgroups
 ```
-vi /etc/default/
+vi /etc/default/grub
 
 GRUB_CMDLINE_LINUX="cgroup_enable=memory cgroup_memory=1 systemd.unified_cgroup_hierarchy=0"
 sudo update-grub
