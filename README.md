@@ -31,7 +31,11 @@ microk8s enable registry:size=100Gi
 (Enter 192.168.1.120-192.168.1.130 for the IP range)
 
 ## 5. Create an alias for microk8s.kubectl
-`echo "alias kubectl='microk8s kubectl'" > ~/.bash_aliases`
+```
+echo "alias kubectl='microk8s.kubectl'" > ~/.bash_aliases
+sudo usermod -a -G microk8s david
+newgrp microk8s
+```
 
 ## 6. Get the kube config file, set it to default, and verify
 ```
@@ -48,7 +52,6 @@ kubectl apply -f ./configs/nvme-raid-sc.yaml
 kubectl patch storageclass  ssd-raid -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
 kubectl patch storageclass  microk8s-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 ```
-
 
 ## 8. Get the secret token used to log into the dashboard
 ```
