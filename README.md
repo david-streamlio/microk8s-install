@@ -1,28 +1,46 @@
 # Kubernetes Installation on Ubuntu 22.04 
 
-## 1. Install the microk8s snap
+## 0. Increase max virtual memory
+
+```
+echo "vm.max_map_count=1048576" >> /etc/sysctl.conf
+sudo sysctl -p
+```
+
+## 1. Enable cgroups
+```
+vi /etc/default/
+
+GRUB_CMDLINE_LINUX="cgroup_enable=memory cgroup_memory=1 systemd.unified_cgroup_hierarchy=0"
+sudo update-grub
+```
+Kernel reboot is required
+
+
+## 2. Install the microk8s snap
 `sudo snap install microk8s --channel 1.25/stable --classic`
 
-## 2. Enable microk8s services
+## 3. Enable microk8s services
 ```
 microk8s enable cert-manager dashboard dns helm hostpath-storage metrics-server
+microk8s enable registry:size=100Gi
 ```
 
-## 3. Enable the microk8s load balancer
+## 4. Enable the microk8s load balancer
 `microk8s enable metallb`
 (Enter 192.168.1.120-192.168.1.130 for the IP range)
 
-## 4. Create an alias for microk8s.kubectl
+## 5. Create an alias for microk8s.kubectl
 `echo "alias kubectl='microk8s kubectl'" > ~/.bash_aliases`
 
-## 5. Get the kube config file, set it to default, and verify
+## 6. Get the kube config file, set it to default, and verify
 ```
 cp /var/snap/microk8s/current/credentials/client.config ~/.kube/microk8s.config
 export KUBECONFIG=~/.kube/microk8s.config
 kubectl get nodes
 ```
 
-## 6. Add and set new storage classes for SSD and NVME
+## 7. Add and set new storage classes for SSD and NVME
 ```
 kubectl apply -f ./configs/ssd-raid-sc.yaml
 kubectl apply -f ./configs/nvme-raid-sc.yaml
@@ -32,7 +50,7 @@ kubectl patch storageclass  microk8s-hostpath -p '{"metadata": {"annotations":{"
 ```
 
 
-## 7. Get the secret token used to log into the dashboard
+## 8. Get the secret token used to log into the dashboard
 ```
 token=$(microk8s kubectl -n kube-system get secret | grep default-token | cut -d " " -f1)
 microk8s kubectl -n kube-system describe secret $token
@@ -52,3 +70,4 @@ References
 2. https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/
 3. https://microk8s.io/docs/addon-dashboard
 4. https://github.com/canonical/microk8s/issues/463
+5. https://askubuntu.com/questions/1237813/enabling-memory-cgroup-in-ubuntu-20-04
