@@ -20,31 +20,36 @@ Kernel reboot is required
 ## 2. Install the microk8s snap
 `sudo snap install microk8s --channel 1.25/stable --classic`
 
-## 3. Enable microk8s services
+
+## 3. Add your user id to the microk8s group
 ```
-microk8s enable cert-manager dashboard dns helm hostpath-storage metrics-server
-microk8s enable registry:size=100Gi
+sudo usermod -a -G microk8s $USER
+sudo chown -f -R $USER ~/.kube
 ```
 
-## 4. Enable the microk8s load balancer
+## 4. Enable microk8s services
+```
+microk8s enable cert-manager dashboard dns helm hostpath-storage metrics-server
+```
+
+## 5. Enable the microk8s load balancer
 `microk8s enable metallb`
 (Enter 192.168.1.120-192.168.1.130 for the IP range)
 
-## 5. Create an alias for microk8s.kubectl
+
+## 6. Create an alias for microk8s.kubectl
 ```
 echo "alias kubectl='microk8s.kubectl'" > ~/.bash_aliases
-sudo usermod -a -G microk8s david
-newgrp microk8s
 ```
 
-## 6. Get the kube config file, set it to default, and verify
+## 7. Get the kube config file, set it to default, and verify
 ```
 cp /var/snap/microk8s/current/credentials/client.config ~/.kube/microk8s.config
 export KUBECONFIG=~/.kube/microk8s.config
 kubectl get nodes
 ```
 
-## 7. Add and set new storage classes for SSD and NVME
+## 8. Add and set new storage classes for SSD and NVME
 ```
 kubectl apply -f ./configs/ssd-raid-sc.yaml
 kubectl apply -f ./configs/nvme-raid-sc.yaml
@@ -53,7 +58,7 @@ kubectl patch storageclass  ssd-raid -p '{"metadata": {"annotations":{"storagecl
 kubectl patch storageclass  microk8s-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 ```
 
-## 8. Get the secret token used to log into the dashboard
+## 9. Get the secret token used to log into the dashboard
 ```
 token=$(microk8s kubectl -n kube-system get secret | grep default-token | cut -d " " -f1)
 microk8s kubectl -n kube-system describe secret $token
