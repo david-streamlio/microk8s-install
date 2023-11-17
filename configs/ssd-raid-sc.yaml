@@ -1,10 +1,11 @@
 
-# ssd-hostpath-sc.yaml
+# SSD backed storage class
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: ssd-raid
 provisioner: microk8s.io/hostpath
+allowVolumeExpansion: true
 reclaimPolicy: Delete
 parameters:
   pvDir: /mnt/md0

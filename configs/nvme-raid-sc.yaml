@@ -1,10 +1,11 @@
 
-# ssd-hostpath-sc.yaml
+# NVME Backed Storage Class
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: nvme-raid
 provisioner: microk8s.io/hostpath
+allowVolumeExpansion: true
 reclaimPolicy: Delete
 parameters:
   pvDir: /mnt/nvme00
