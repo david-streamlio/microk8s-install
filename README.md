@@ -9,7 +9,7 @@ sudo sysctl -p
 
 ## 1. Enable cgroups
 ```
-vi /etc/default/
+vi /etc/default/grub
 
 GRUB_CMDLINE_LINUX="cgroup_enable=memory cgroup_memory=1 systemd.unified_cgroup_hierarchy=0"
 sudo update-grub
@@ -32,18 +32,16 @@ kubectl patch storageclass  microk8s-hostpath -p '{"metadata": {"annotations":{"
 ## 4. Enable microk8s services
 ```
 microk8s enable cert-manager dashboard dns helm hostpath-storage metrics-server
-microk8s enable registry:size=100Gi
 ```
 
 ## 5. Enable the microk8s load balancer
 `microk8s enable metallb`
 (Enter 192.168.1.120-192.168.1.130 for the IP range)
 
+
 ## 6. Create an alias for microk8s.kubectl
 ```
 echo "alias kubectl='microk8s.kubectl'" > ~/.bash_aliases
-sudo usermod -a -G microk8s david
-newgrp microk8s
 ```
 
 ## 7. Get the kube config file, set it to default, and verify
@@ -52,6 +50,7 @@ cp /var/snap/microk8s/current/credentials/client.config ~/.kube/microk8s.config
 export KUBECONFIG=~/.kube/microk8s.config
 kubectl get nodes
 ```
+
 
 ## 8. Get the secret token used to log into the dashboard
 ```
