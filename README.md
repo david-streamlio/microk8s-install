@@ -1,26 +1,25 @@
 # Kubernetes Installation on Ubuntu 22.04 
 
-## 0. Increase max virtual memory
+## 1. Increase max virtual memory
 
 ```
 echo "vm.max_map_count=1048576" >> /etc/sysctl.conf
 sudo sysctl -p
 ```
 
-## 1. Enable cgroups
+## 2. Enable cgroups
 ```
 vi /etc/default/grub
 
-GRUB_CMDLINE_LINUX="cgroup_enable=memory cgroup_memory=1 systemd.unified_cgroup_hierarchy=0"
+GRUB_CMDLINE_LINUX="cgroup_enable=memory cgroup_memory=1 systemd.unified_cgroup_hierarchy=1"
 sudo update-grub
 ```
-Kernel reboot is required
+**Kernel reboot is required**
 
-
-## 2. Install the microk8s snap
+## 3. Install the microk8s snap
 `sudo snap install microk8s --channel 1.25/stable --classic`
 
-## 3. Add and set new storage classes for SSD and NVME
+## 4. Add and set new storage classes for SSD and NVME
 ```
 kubectl apply -f ./configs/ssd-raid-sc.yaml
 kubectl apply -f ./configs/nvme-raid-sc.yaml
@@ -29,22 +28,23 @@ kubectl patch storageclass  ssd-raid -p '{"metadata": {"annotations":{"storagecl
 kubectl patch storageclass  microk8s-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 ```
 
-## 4. Enable microk8s services
+## 5. Enable microk8s services
 ```
 microk8s enable cert-manager dashboard dns helm hostpath-storage metrics-server
+microk8s enable registry:size=200Gi    # Specify whatever size you like.
 ```
 
-## 5. Enable the microk8s load balancer
+## 6. Enable the microk8s load balancer
 `microk8s enable metallb`
 (Enter 192.168.1.120-192.168.1.130 for the IP range)
 
 
-## 6. Create an alias for microk8s.kubectl
+## 7. Create an alias for microk8s.kubectl
 ```
 echo "alias kubectl='microk8s.kubectl'" > ~/.bash_aliases
 ```
 
-## 7. Get the kube config file, set it to default, and verify
+## 8. Get the kube config file, set it to default, and verify
 ```
 cp /var/snap/microk8s/current/credentials/client.config ~/.kube/microk8s.config
 export KUBECONFIG=~/.kube/microk8s.config
@@ -52,7 +52,7 @@ kubectl get nodes
 ```
 
 
-## 8. Get the secret token used to log into the dashboard
+## 9. Get the secret token used to log into the dashboard
 ```
 token=$(microk8s kubectl -n kube-system get secret | grep default-token | cut -d " " -f1)
 microk8s kubectl -n kube-system describe secret $token
