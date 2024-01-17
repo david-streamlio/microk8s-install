@@ -14,7 +14,7 @@ vi /etc/default/grub
 GRUB_CMDLINE_LINUX="cgroup_enable=memory cgroup_memory=1 systemd.unified_cgroup_hierarchy=1"
 sudo update-grub
 ```
-**Kernel reboot is required**
+     **Kernel reboot is required**
 
 ## 3. Install the microk8s snap
 `sudo snap install microk8s --channel 1.27/stable --classic`
@@ -29,7 +29,7 @@ Follow the [etcd installation guide](./docs/etcd-install.md) to create your etcd
 
 Add the following line:
 
-`--etcd-servers=http://<ETCD-NODE-0>:2379,http://<ETCD-NODE-1>:2379`
+`--etcd-servers=http://<ETCD-NODE-0>:2379,http://<ETCD-NODE-1>:2379,....`
 
 ## 6. Restart microk8s
 
@@ -49,7 +49,7 @@ sudo microk8s start
 
   ```
 
-## 8. Stop the k8s-dqlite service
+## 8. Stop the k8s-dqlite service (optional)
 
 `sudo systemctl stop snap.microk8s.daemon-k8s-dqlite.service`
 
@@ -67,7 +67,7 @@ kubectl patch storageclass  ssd-raid -p '{"metadata": {"annotations":{"storagecl
 kubectl patch storageclass  microk8s-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 ```
 
-## 11. Enable microk8s container registry
+## 11. Enable microk8s Container Registry
 
 This must be done after the default storage class is changed to ensure that the registry uses a PV created from the ssd-raid
 pool vs. the root partition. It is also important to perform this step **BEFORE** you install any software on microk8s that
