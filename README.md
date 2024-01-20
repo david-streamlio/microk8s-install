@@ -23,6 +23,9 @@ sudo update-grub
 
 Follow the [etcd installation guide](./docs/etcd-install.md) to create your etcd cluster
 
+The following is CRITICAL
+`sudo microk8s kubectl apply -f /var/snap/microk8s/current/args/cni-network/cni.yaml`
+
 ## 5. Configure microk8s to use etcd
 
 `sudo vi /var/snap/microk8s/current/args/kube-apiserver`
@@ -71,7 +74,7 @@ kubectl patch storageclass  microk8s-hostpath -p '{"metadata": {"annotations":{"
 
 This must be done after the default storage class is changed to ensure that the registry uses a PV created from the ssd-raid
 pool vs. the root partition. It is also important to perform this step **BEFORE** you install any software on microk8s that
-requires an image download, e.g. `microk8s install cert-manager`, otherwise there won't be a place to store the images that
+requires an image download, e.g. `microk8s enable cert-manager`, otherwise there won't be a place to store the images that
 are downloaded from the internet and the installation will hang.
 
 ```
