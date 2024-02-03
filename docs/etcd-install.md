@@ -25,10 +25,21 @@ the only relevant documentation I could find was [here](https://github.com/adame
    sudo vi /var/snap/etcd/common/etcd.conf.yml
    ```
 
-   Make sure these properties are set
+   Make sure the following properties are set
 
-   listen-client-urls: http://127.0.0.1:2379
-   advertise-client-urls: http://127.0.0.1:2379
+   ```
+   # Human-readable name for this member.
+   name: 'ectd0'
+
+   # Path to the data directory.
+   data-dir: /mnt/ssd-raid/etcd/data
+
+   # Path to the dedicated wal directory.
+   wal-dir: /mnt/nvme-raid/etcd/wal
+
+   listen-client-urls: http://etc:2379
+   advertise-client-urls: http://etc0:2379
+   ```
 
 ## 4. Start the service & check the status
 
