@@ -16,15 +16,17 @@ sudo update-grub
 ```
      **Kernel reboot is required**
 
+
 ## 3. Install the microk8s snap
 `sudo snap install microk8s --channel 1.27/stable --classic`
 
-## 4. Install etcd to use as the backend storage mechanism for microk8s
 
-Follow the [etcd installation guide](./docs/etcd-install.md) to create your etcd cluster
+## 4. Install etcd to use as the backend storage mechanism for microk8s (CRITICAL)
 
-The following is CRITICAL
+Follow the [etcd installation guide](./docs/etcd-install.md) to create your etcd cluster.
+
 `sudo microk8s kubectl apply -f /var/snap/microk8s/current/args/cni-network/cni.yaml`
+
 
 ## 5. Configure microk8s to use etcd
 
