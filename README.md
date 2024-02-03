@@ -80,7 +80,7 @@ requires an image download, e.g. `microk8s enable cert-manager`, otherwise there
 are downloaded from the internet and the installation will hang.
 
 ```
-microk8s enable registry:size=200Gi    # Specify whatever size you like.
+microk8s enable registry:size=250Gi    # Specify whatever size you like.
 ```
 
 ## 12. Enable the microk8s load balancer
@@ -89,7 +89,7 @@ This allows microk8s to assign static IPs on your internal router network so tha
 your network
 
 `microk8s enable metallb`
-(Enter 192.168.1.120-192.168.1.140 for the IP range) this will give you a pool of 20 IP addresses that can be used to 
+(Enter 192.168.1.100-192.168.1.120 for the IP range) this will give you a pool of 20 IP addresses that can be used to 
 expose services running inside microk8s.
 
 
