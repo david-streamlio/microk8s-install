@@ -8,6 +8,6 @@ provisioner: microk8s.io/hostpath
 allowVolumeExpansion: true
 reclaimPolicy: Delete
 parameters:
-  pvDir: /mnt/md0
+  pvDir: /mnt/ssd-raid
 volumeBindingMode: WaitForFirstConsumer
 

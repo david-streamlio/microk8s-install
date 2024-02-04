@@ -8,6 +8,6 @@ provisioner: microk8s.io/hostpath
 allowVolumeExpansion: true
 reclaimPolicy: Delete
 parameters:
-  pvDir: /mnt/nvme00
+  pvDir: /mnt/nvme-raid
 volumeBindingMode: WaitForFirstConsumer
 
