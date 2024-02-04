@@ -51,6 +51,7 @@ sudo microk8s start
        datastore endpoints:
          <ETCD-NODE-0>:2379
          <ETCD-NODE-1>:2379
+         ...
 
   ```
 
@@ -98,14 +99,7 @@ expose services running inside microk8s.
 echo "alias kubectl='microk8s.kubectl'" > ~/.bash_aliases
 ```
 
-## 14. Get the kube config file, set it to default, and verify
-```
-cp /var/snap/microk8s/current/credentials/client.config ~/.kube/microk8s.config
-export KUBECONFIG=~/.kube/microk8s.config
-kubectl get nodes
-```
-
-## 15. Get the secret token used to log into the dashboard
+## 14. Get the secret token used to log into the dashboard
 ```
 token=$(microk8s kubectl -n kube-system get secret | grep default-token | cut -d " " -f1)
 microk8s kubectl -n kube-system describe secret $token
@@ -115,7 +109,7 @@ microk8s kubectl port-forward -n kube-system service/kubernetes-dashboard 10443:
 
 You can then access the Dashboard at https://127.0.0.1:10443
 
-![K8s-Dashbaord.png](images%2FK8s-Dashbaord.png)
+![K8s-Dashbaord.png](images%2FK8s-Dashboard.png)
 
 
 -------------------
