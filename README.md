@@ -60,7 +60,7 @@ sudo microk8s start
 
 ## 9. Enable microk8s services
 ```
-microk8s enable dashboard dns hostpath-storage
+microk8s enable hostpath-storage
 ```
 
 ## 10. Add and set new storage classes for SSD and NVME
