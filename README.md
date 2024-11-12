@@ -73,7 +73,7 @@ Configure the Container Network Interface (CNI) used by MicroK8s. Applying netwo
 - IP allocation settings.
 - Any specific settings related to the CNI plugin being used.
 
-`sudo microk8s kubectl apply -f /var/snap/microk8s/current/args/cni-network/cni.yaml`
+```sudo microk8s kubectl apply -f /var/snap/microk8s/current/args/cni-network/cni.yaml```
 
 If you are having network issues in MicroK8s (e.g., pods cannot communicate), inspect the logs of the CNI pods
 
@@ -91,14 +91,16 @@ using etcd for that purpose, it is safe to disable this service as it serves no 
 <br/>
 
 ## 10. Enable microk8s services
-
-Enable a hostPath storage provisioner in MicroK8s. `hostPath` is a type of persistent storage in Kubernetes that maps a directory on the host machine (where the Kubernetes node is running) to a directory inside a pod.
+For microk8s to work as needed, we need to enable a few services using the following command:
 
 ```
-microk8s enable hostpath-storage
+microk8s enable hostpath-storage dns
 ```
 
-This type of storage is useful for local development or testing when you don't need a distributed storage solution like NFS, Ceph, or cloud-based storage (e.g., AWS EBS, GCP PD).
+- Enables a hostPath storage provisioner in MicroK8s. `hostPath` is a type of persistent storage in Kubernetes that maps a directory on the host machine (where the Kubernetes node is running) to a directory inside a pod. This type of storage is useful for local development or testing when you don't need a distributed storage solution like NFS, Ceph, or cloud-based storage (e.g., AWS EBS, GCP PD).
+
+
+- Installs CoreDNS: CoreDNS is a flexible, extensible DNS server that can serve as the DNS service for Kubernetes clusters. It helps resolve DNS names within the cluster.
 
 <br/>
 
@@ -137,7 +139,7 @@ This allows microk8s to assign static IPs on your internal router network so tha
 your network
 
 `microk8s enable metallb`
-(Enter 192.168.1.100-192.168.1.120 for the IP range) this will give you a pool of 20 IP addresses that can be used to 
+(Enter 192.168.0.200-192.168.0.240 for the IP range) this will give you a pool of 40 IP addresses that can be used to 
 expose services running inside microk8s.
 
 <br/>
