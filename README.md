@@ -1,175 +1,94 @@
-# Kubernetes Installation on Ubuntu 22.04 
+# MicroK8s Guide
 
-## 1. Increase max virtual memory
+MicroK8s is an open-source system for automating deployment, scaling, and management of containerised applications. 
+It provides the functionality of core Kubernetes components, in a small footprint, scalable from a single node to a 
+high-availability production cluster.
 
-```
-echo "vm.max_map_count=1048576" >> /etc/sysctl.conf
-sudo sysctl -p
-```
+This is a collection of my notes for setting up MicroK8s in my Ubuntu-based home lab.
 
-## 2. Enable cgroups
-```
-vi /etc/default/grub
+-------------------
+## Prerequisites
 
-GRUB_CMDLINE_LINUX="cgroup_enable=memory cgroup_memory=1 systemd.unified_cgroup_hierarchy=1"
-sudo update-grub
-```
-     **Kernel reboot is required**
+- An Ubuntu 22.04 LTS, 20.04 LTS, 18.04 LTS or 16.04 LTS environment to run the commands (or another operating system which supports snapd - see the snapd documentation).
+- A system with at least 20G of disk space and 4G of memory.
+- An internet connection
 
+-------------------
+## Getting Started
 
-## 3. Install the microk8s snap
+MicroK8s is easy to install and use on Ubuntu or any Linux which supports snaps - see the 
+[microk8s-installation-guide.md](docs%2Fmicrok8s-installation-guide.md) for detailed on the steps I used to install it 
+on Ubuntu 22.04, including OS level changes, and using ETCD as the metadata store for H/A.
 
-Install the microk8s snap onto the Ubuntu machine using the following command.
+-------------------
+## MicroK8s Clustering
 
-`sudo snap install microk8s --channel 1.29/stable --classic`
+Although MicroK8s is designed as an ultra-lightweight implementation of Kubernetes, it is still possible, and useful to 
+create a MicroK8s cluster. My home lab consists of three Dell Precision servers, each running Ubuntu 22.04. 
 
-<br/>
+- k8s-node00 (Dell Precision T5600 - 40 cores & 128 GB of RAM)
+- k8s-node01 (Dell Precision T7200 - 56 cores & 512 GB of RAM)
+- k8s-node02 (Dell Precision T7200 - 72 cores & 512 GB of RAM)
 
-## 4. Install etcd to use as the backend storage mechanism for microk8s (CRITICAL)
+I then installed MicroK8s on each of them using the [microk8s-installation-guide.md](docs%2Fmicrok8s-installation-guide.md). 
 
-Follow the [etcd installation guide](./docs/etcd-install.md) to create your etcd cluster.
+In order to get them to act as a single K8s cluster, that would allow the K8s schedule to allocate resources from all 
+three of my servers, I had to perform the following steps:
 
-<br/>
+### Adding a node
 
-## 5. Configure microk8s to use etcd
+To create a cluster out of two or more already-running MicroK8s instances, use the microk8s add-node command. The MicroK8s
+instance on which this command is run will be the master of the cluster and will host the Kubernetes control plane:
 
-`sudo vi /var/snap/microk8s/current/args/kube-apiserver`
+On k8s-node00:  
 
-Add the following line:
-
-`--etcd-servers=http://<ETCD-NODE-0>:2379,http://<ETCD-NODE-1>:2379,....`
-
-<br/>
-
-## 6. Restart microk8s
-
-```
-sudo microk8s stop
-sudo microk8s start
-```
-
-<br/>
-
-## 7. Confirm that microk8s is using etcd now
-
-  ```
-  sudo microk8s status
-     microk8s is running
-       datastore endpoints:
-         <ETCD-NODE-0>:2379
-         <ETCD-NODE-1>:2379
-         ...
-
-  ```
-
-<br/>
-
-## 8. Configure Networking
-
-Configure the Container Network Interface (CNI) used by MicroK8s. Applying network configuration settings, such as:
-
-- The type of CNI plugin to use (e.g., flannel, calico, cilium).
-- Network CIDR (IP range) for the pods.
-- IP allocation settings.
-- Any specific settings related to the CNI plugin being used.
-
-```sudo microk8s kubectl apply -f /var/snap/microk8s/current/args/cni-network/cni.yaml```
-
-If you are having network issues in MicroK8s (e.g., pods cannot communicate), inspect the logs of the CNI pods
-
-```microk8s kubectl logs -n kube-system <cni-pod-name>```
-
-<br/>
-
-## 9. Stop the k8s-dqlite service (optional)
-
-The K8s dqlite service is used to store information about the K8s cluster. However, since we are
-using etcd for that purpose, it is safe to disable this service as it serves no purpose at this point.
-
-`sudo systemctl stop snap.microk8s.daemon-k8s-dqlite.service`
-
-<br/>
-
-## 10. Enable microk8s services
-For microk8s to work as needed, we need to enable a few services using the following command:
-
-```
-microk8s enable hostpath-storage dns
+```bash
+microk8s add-node
+From the node you wish to join to this cluster, run the following:
+microk8s join 192.168.0.80:25000/b83780a7497a862c2869cd69923c90a6/c0648301f8a2
 ```
 
-- Enables a hostPath storage provisioner in MicroK8s. `hostPath` is a type of persistent storage in Kubernetes that maps a directory on the host machine (where the Kubernetes node is running) to a directory inside a pod. This type of storage is useful for local development or testing when you don't need a distributed storage solution like NFS, Ceph, or cloud-based storage (e.g., AWS EBS, GCP PD).
+On k8s-node01 & k8s-node02
 
-
-- Installs CoreDNS: CoreDNS is a flexible, extensible DNS server that can serve as the DNS service for Kubernetes clusters. It helps resolve DNS names within the cluster.
-
-<br/>
-
-## 11. Add and set new storage classes for SSD and NVME
-
-For my cluster, I have created two RAID pools. One comprised of 4 SSD drives per machine, and another comprised of 2 NVMe drives per machine. In order to specify the disk types I want to use inside my K8s deployments, I must first create `storage class` definitions for each of these.
-
-Once those definition are applied, you can also override the default storage class so that all K8s mananged PVC arebacked by SSD storage by default.
-
-```
-kubectl apply -f ./configs/ssd-raid-sc.yaml
-kubectl apply -f ./configs/nvme-raid-sc.yaml
-
-kubectl patch storageclass  ssd-raid -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-kubectl patch storageclass  microk8s-hostpath -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+```bash
+microk8s join 192.168.0.80:25000/b83780a7497a862c2869cd69923c90a6/c0648301f8a2
 ```
 
-<br/>
+Joining a node to the cluster should only take a few seconds. Afterward you should be able to see the nodes have 
+joined the cluster by running the following command and getting a list with all 3 nodes in it as shown here:
 
-## 12. Enable microk8s Container Registry
-
-This must be done after the default storage class is changed to ensure that the registry uses a PV created from the ssd-raid
-pool vs. the root partition. It is also important to perform this step **BEFORE** you install any software on microk8s that
-requires an image download, e.g. `microk8s enable cert-manager`, otherwise there won't be a place to store the images that
-are downloaded from the internet and the installation will hang.
-
-```
-microk8s enable registry:size=300Gi    # Specify whatever size you like.
+```bash
+kubectl get no
+NAME                        STATUS   ROLES    AGE     VERSION
+k8s-node00.kubernetes.net   Ready    <none>   4d18h   v1.29.10
+k8s-node01.kubernetes.net   Ready    <none>   4d18h   v1.29.10
+k8s-node02.kubernetes.net   Ready    <none>   4d18h   v1.29.10
 ```
 
-<br/>
 
-## 13. Enable the microk8s load balancer
+-------------------
+## MicroK8s Addons
 
-This allows microk8s to assign static IPs on your internal router network so that they are publicly accessible inside
-your network
+To be as lightweight as possible, MicroK8s only installs the basics of a usable
+Kubernetes install:
 
-`microk8s enable metallb`
-(Enter 192.168.0.200-192.168.0.240 for the IP range) this will give you a pool of 40 IP addresses that can be used to 
-expose services running inside microk8s.
+- api-server
+- controller-manager
+- scheduler 
+- kubelet 
+- cni 
+- kube-proxy
 
-<br/>
+While this does deliver a pure Kubernetes experience with the smallest resource footprint possible, there are situations
+where you may require additional services. MicroK8s caters for this with the concept of “Addons” - extra services which 
+can easily be added to MicroK8s. These addons can be enabled and disabled at any time, and most are pre-configured to 
+‘just work’ without any further set up. Below are links to the steps I took to install the addons required for my cluster:
 
-## 14. Create an alias for microk8s.kubectl
-```
-echo "alias kubectl='microk8s.kubectl'" > ~/.bash_aliases
-```
 
-<br/>
-
-## 15. Get the secret token used to log into the dashboard
-```
-token=$(microk8s kubectl -n kube-system get secret | grep default-token | cut -d " " -f1)
-microk8s kubectl -n kube-system describe secret $token
-
-microk8s kubectl port-forward -n kube-system service/kubernetes-dashboard 10443:443 &
-```
-
-You can then access the Dashboard at https://127.0.0.1:10443
-
-![K8s-Dashbaord.png](images%2FK8s-Dashboard.png)
-
-<br/>
+- [minio-installation.md](docs%2Fminio-installation.md)
 
 -------------------
 References
 -------------------
-1. https://microk8s.io/docs/getting-started
-2. https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/
-3. https://microk8s.io/docs/addon-dashboard
-4. https://github.com/canonical/microk8s/issues/463
-5. https://askubuntu.com/questions/1237813/enabling-memory-cgroup-in-ubuntu-20-04
+1. https://microk8s.io/docs
+2. https://microk8s.io/docs/addon-dashboard
