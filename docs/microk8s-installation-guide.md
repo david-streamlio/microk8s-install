@@ -88,13 +88,25 @@ using etcd for that purpose, it is safe to disable this service as it serves no 
 For microk8s to work as needed, we need to enable a few services using the following command:
 
 ```
-microk8s enable hostpath-storage dns
+microk8s enable hostpath-storage dns ingress dashboard
 ```
 
-- Enables a hostPath storage provisioner in MicroK8s. `hostPath` is a type of persistent storage in Kubernetes that maps a directory on the host machine (where the Kubernetes node is running) to a directory inside a pod. This type of storage is useful for local development or testing when you don't need a distributed storage solution like NFS, Ceph, or cloud-based storage (e.g., AWS EBS, GCP PD).
+- [HostPath](https://microk8s.io/docs/addon-hostpath-storage) is a storage provisioner in MicroK8s. `hostPath` is a type
+  of persistent storage in Kubernetes that maps a directory on the host machine (where the Kubernetes node is running) 
+  to a directory inside a pod. This type of storage is useful for local development or testing when you don't need a 
+  distributed storage solution like NFS, Ceph, or cloud-based storage (e.g., AWS EBS, GCP PD).
 
 
-- Installs CoreDNS: CoreDNS is a flexible, extensible DNS server that can serve as the DNS service for Kubernetes clusters. It helps resolve DNS names within the cluster.
+- [CoreDNS](https://microk8s.io/docs/addon-dns) is a flexible, extensible DNS server that can serve as the DNS service 
+  for Kubernetes clusters. It helps resolve DNS names within the cluster.
+
+
+- [Ingress](https://microk8s.io/docs/addon-ingress): This addon adds an NGINX Ingress Controller for MicroK8s, which can
+  be used for load-balancing in front of service endpoints.
+  
+
+- [Dashboard](https://microk8s.io/docs/addon-dashboard): This addon enables the standard K8s dashboard, which is a 
+  convenient way to keep track of the activity and resource use of MicroK8s.
 
 -----------------
 ## 11. Add and set new storage classes for SSD and NVME
@@ -133,24 +145,41 @@ your network
 (Enter 192.168.0.200-192.168.0.240 for the IP range) this will give you a pool of 40 IP addresses that can be used to 
 expose services running inside microk8s.
 
+After you created the address pool, you need to configure the L2Advertisement this will allow that the ip addresses of 
+the pool answer to ARP requests, because the ip addresses are not associated to any interface, to do this using the 
+following command
+
+```
+microk8s kubectl apply -f configs/advertisement.yaml
+```
+
 -----------------
 ## 14. Create an alias for microk8s.kubectl
 ```
 echo "alias kubectl='microk8s.kubectl'" > ~/.bash_aliases
 ```
 
+## 15. Expose the K8s Dashboard service 
+
+Next, we are going to enable the Kubernetes dashboard and expose it using a friendly name using an ingress controller. 
+This allows us to access the dashboard using an easy to remember DNS name rather than using port forwarding from the pod.
+To do this, we need to run the following command to create the ingress controller for the dashboard pod and associate it
+with the IP address of `192.168.0.201`
+
+```
+kubectl apply -f configs/k8s-dashboard-service.yaml
+```
+
 -----------------
-## 15. Get the secret token used to log into the dashboard
+## 16. Get the secret token used to log into the dashboard
 ```
 token=$(microk8s kubectl -n kube-system get secret | grep default-token | cut -d " " -f1)
 microk8s kubectl -n kube-system describe secret $token
-
-microk8s kubectl port-forward -n kube-system service/kubernetes-dashboard 10443:443 &
 ```
 
 You can then access the Dashboard at https://127.0.0.1:10443
 
-![K8s-Dashbaord.png](images%2FK8s-Dashboard.png)
+![K8s-Dashboard.png](..%2Fimages%2FK8s-Dashboard.png)
 
 
 -------------------
