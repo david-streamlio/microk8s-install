@@ -16,19 +16,13 @@ the only relevant documentation I could find was [here](https://github.com/adame
 
 ## 2. If you want to use non-standard directories for your data and write-ahead-logs (Optional)
 
-You will need to modify the AppArmor profile for the etcd snap to allow it to Read/Write in the non-standard directories.
-Before making any changes, create a backup of the existing AppArmor profile, then open the AppArmor profile for editing 
-using a text editor and adjust the rules to allow ETCD to work.
+Because Snap overwrites the AppArmor file `/var/lib/snapd/apparmor/profiles/snap.etcd.etcd` on refresh, you will need to create a script that inserts your custom rules just before the final `}` in that file and reload the AppArmor profile. This will ensure that the necessary changes aren't lost when applying updates to Ubuntu.
 
-```
-sudo cp /var/lib/snapd/apparmor/profiles/snap.etcd.etcd /var/lib/snapd/apparmor/profiles/snap.etcd.etcd.bak
-sudo vi /var/lib/snapd/apparmor/profiles/snap.etcd.etcd
-```
+In order to automate this process, we will use a `systemd Path` unit to watch for changes and run this script whenever changes to the `/var/lib/snapd/apparmor/profiles/snap.etcd.etcd` are detected. The script will need to modify the default AppArmor profile for the etcd snap to allow it to Read/Write in the non-standard directories.
 
 In my deployment, I have two separate mount points, that I want to use. The first `/mnt/ssd-raid` points to a RAID Array
 of SSD Drives that I will use for the etcd **data** directory. The other is `/mnt/nvme-raid` that points to a RAID Array of 
-NVMe drives that I will use for the etcd write-ahead-log. Locate the section in the profile that defines the rules for 
-file access, then add the following lines:
+NVMe drives that I will use for the etcd write-ahead-log. Therefore to allow these directories to be used, the following permissions need to be added to the default AppArmor profile.
 
 **NOTE**: Adjust the directories to match your mount point configuration.
 
@@ -37,8 +31,8 @@ profile "snap.etcd.etcd" (attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
   #include <abstractions/consoles>
   #include <abstractions/openssl>
-
-  #### ADD THE FOLLOWING LINES #### 
+  ...
+  #### ADD THE FOLLOWING LINES TO THE END #### 
   # Grant permissions on the RAID mount points  
   /mnt/ssd-raid/** rw,
   /mnt/nvme-raid/** rw,
@@ -46,13 +40,86 @@ profile "snap.etcd.etcd" (attach_disconnected,mediate_deleted) {
   /mnt/nvme-raid/etcd/** wk,
 ```
 
-After modifying the AppArmor profile, reload the profiles to apply the changes and restart the etcd snap to ensure that 
-the changes take effect:
+To automate the process requires the following steps:
+
+### Step 1: Create the patch script
+Create a script, e.g. `/usr/local/sbin/patch-snap-etcd-apparmor.sh`:
 
 ```
-  sudo apparmor_parser -r /var/lib/snapd/apparmor/profiles/snap.etcd.etcd
-  sudo snap restart etcd
-  ```
+#!/bin/bash
+PROFILE="/var/lib/snapd/apparmor/profiles/snap.etcd.etcd"
+BACKUP="/var/lib/snapd/apparmor/profiles/snap.etcd.etcd.bak"
+
+# Backup original if not exists
+if [ ! -f "$BACKUP" ]; then
+  cp "$PROFILE" "$BACKUP"
+fi
+
+# Insert custom rules just before the last closing brace
+# Remove existing custom lines if any, then add fresh
+sed -i '/# CUSTOM OVERRIDE START/,/# CUSTOM OVERRIDE END/d' "$PROFILE"
+
+
+# Insert new custom rules *before* the final closing brace
+sed -i -e '$i\
+  # CUSTOM OVERRIDE START\
+  /mnt/ssd-raid/** rw,\
+  /mnt/nvme-raid/** rw,\
+  /mnt/ssd-raid/etcd/data/member/snap/db wk,\
+  /mnt/nvme-raid/etcd/** wk,\
+  # CUSTOM OVERRIDE END' "$PROFILE"
+
+# Reload AppArmor profile
+apparmor_parser -r "$PROFILE"
+```
+
+Make it executable: `sudo chmod +x /usr/local/sbin/patch-snap-etcd-apparmor.sh`
+
+### Step 2: Create systemd Path unit to watch profile changes
+Create `/etc/systemd/system/patch-snap-etcd-apparmor.path` with the following contents:
+
+```
+[Unit]
+Description=Watch snap.etcd.etcd AppArmor profile for changes
+
+[Path]
+PathChanged=/var/lib/snapd/apparmor/profiles/snap.etcd.etcd
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+### Step 3: Create systemd service to run the patch
+Create `/etc/systemd/system/patch-snap-etcd-apparmor.service` with the following contents:
+
+```
+[Unit]
+Description=Patch snap.etcd.etcd AppArmor profile with custom rules
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/patch-snap-etcd-apparmor.sh
+```
+
+### Step 4: Enable and start the path watcher
+
+```
+sudo systemctl daemon-reload
+sudo systemctl enable --now patch-snap-etcd-apparmor.path
+```
+
+### Step 5: Manually run once to patch current profile
+
+```
+sudo /usr/local/sbin/patch-snap-etcd-apparmor.sh
+```
+
+How it works
+  - When Snap updates or rewrites the AppArmor profile, systemd sees the file changed.
+  - It runs your patch script automatically.
+  - The script cleans previous custom rules and injects your additions safely.
+  - The profile is reloaded, keeping etcd working with your required permissions.
 
 ## 3. Configure etcd
 
