@@ -89,7 +89,9 @@ NOTES:
 1. Expose the Grafana service
 
 ```bash
-kubectl expose svc grafana --name grafana-external -n monitor --port 3000 --target-port 3000 --type LoadBalancer
+# kubectl expose svc grafana --name grafana-external -n monitor --port 3000 --target-port 3000 --type LoadBalancer
+
+kubectl apply -f configs/grafana-service.yaml
 ```
 
 2. Get the Grafana password
